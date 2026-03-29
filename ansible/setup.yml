@@ -1,0 +1,24 @@
+---
+- name:   
+  hosts: pipeline
+  become: yes
+  tasks:
+   - name: Install nginx
+     apt:
+      name: nginx
+      state: present
+      update_cache: yes
+  
+   - name: copy website
+     copy:
+       src: ../index.html
+       dest: /var/www/html/index.html
+       notify: Restart nginx
+
+  Handlers:
+   - name: Restart nginx
+     service: 
+      name: nginx
+      state: started
+      enable: true
+
