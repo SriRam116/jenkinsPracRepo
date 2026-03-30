@@ -1,75 +1,77 @@
-pipeline{
+pipeline {
     agent any
 
-    environment{
+    environment {
         KEY = "pipeKey"
     }
 
     stages {
-        stage('Clone repo'){
+
+        stage('Clone repo') {
             steps {
                 git branch: 'main', url: 'https://github.com/SriRam116/jenkinsPracRepo.git'
             }
         }
-        
-        stage('Terraform init'){
-            steps{
-                dir('terraform'){
-                    sh 'terraform init'
-                    }
-                }
-            }
 
-        stage('Terraform apply'){
-            steps{
-                dir('terraform')
-                sh 'terraform apply -auto-approve'
+        stage('Terraform init') {
+            steps {
+                dir('terraform') {
+                    bat '"C:\\Program Files\\Git\\bin\\bash.exe" -c "terraform init"'
+                }
             }
         }
 
-        stage('get public IP'){
-            steps{
-                script{
-                    EC2_IP = sh(
-                        script: "cd terraform && terraform output -raw awsPubIP",
+        stage('Terraform apply') {
+            steps {
+                dir('terraform') {
+                    bat '"C:\\Program Files\\Git\\bin\\bash.exe" -c "terraform apply -auto-approve"'
+                }
+            }
+        }
+
+        stage('Get Public IP') {
+            steps {
+                script {
+                    EC2_IP = bat(
+                        script: '"C:\\Program Files\\Git\\bin\\bash.exe" -c "cd terraform && terraform output -raw awsPubIP"',
                         returnStdout: true
                     ).trim()
 
-                    sh """
-                    cat <<EOF> ansible/inventory.yml
-                    all:
-                     hosts:
-                      pipeline:
-                       ansible_host: ${EC2_IP}
-                       ansible_user: ubuntu
-                       ansible_ssh_private_key_file: ${KEY}
-                    EOF
+                    bat """
+                    "C:\\Program Files\\Git\\bin\\bash.exe" -c "cat <<EOF > ansible/inventory.yml
+all:
+  hosts:
+    pipeline:
+      ansible_host: ${EC2_IP}
+      ansible_user: ubuntu
+      ansible_ssh_private_key_file: ${KEY}
+EOF"
                     """
                 }
             }
         }
 
-        stage('wait for ssh'){
-            steps{
-                sh 'sleep 60'
+        stage('Wait for SSH') {
+            steps {
+                bat '"C:\\Program Files\\Git\\bin\\bash.exe" -c "sleep 60"'
             }
-        } 
+        }
 
-        stage('run Ansible'){
-            steps{
-                sh 'ansible-playbook -i ansible/inventory ansible/setup.yml'
+        stage('Run Ansible') {
+            steps {
+                bat '"C:\\Program Files\\Git\\bin\\bash.exe" -c "ansible-playbook -i ansible/inventory.yml ansible/setup.yml"'
             }
         }
-        }
-    
-    post{
-        always{
+    }
+
+    post {
+        always {
             echo "done"
         }
-        success{
+        success {
             echo "Successful"
         }
-        failure{
+        failure {
             echo "Failed"
         }
     }
