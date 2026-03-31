@@ -54,16 +54,18 @@ pipeline {
                         returnStdout: true
                     ).trim()
 
-                    bat """
-                    "C:\\Program Files\\Git\\bin\\bash.exe" -c "cat <<EOF > ansible/inventory.yml
+                    withCredentials([sshUserPrivateKey(credentialsId: 'ssh-private-key', keyFileVariable: 'SSH_KEY')]) {
+    bat """
+    "C:\\Program Files\\Git\\bin\\bash.exe" -c "cat <<EOF > ansible/inventory.yml
 all:
   hosts:
     pipeline:
       ansible_host: ${EC2_IP}
       ansible_user: ubuntu
-      ansible_ssh_private_key_file: ${KEY}
+      ansible_ssh_private_key_file: $SSH_KEY
 EOF"
-                    """
+    """
+}
                 }
             }
         }
