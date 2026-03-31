@@ -1,7 +1,7 @@
 variable "region" {
   description = "region info"
   type        = string
-  default     = ""
+  default     = "us-east-1"
 }
 
 variable "profile" {
