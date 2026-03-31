@@ -26,7 +26,7 @@ pipeline {
                 dir('terraform') {
                     withCredentials([[
                         $class: 'AmazonWebServicesCredentialsBinding',
-                        credentialsId: 'aws-creds'
+                        credentialsId: 'pipePrac'
                         ]]) {
                             bat '''
                             "C:\\Program Files\\Git\\bin\\bash.exe" -c "
