@@ -43,29 +43,32 @@ pipeline {
         }
 
         stage('Get Public IP') {
-            steps {
-                script {
-                    EC2_IP = bat(
-                        script: '"C:\\Program Files\\Git\\bin\\bash.exe" -c "cd terraform && terraform output -raw awsPubIP"',
-                        returnStdout: true
-                    ).trim()
+    steps {
+        script {
+            // ✅ Get EC2 IP (no Git Bash needed)
+            EC2_IP = bat(
+                script: 'cd terraform && terraform output -raw awsPubIP',
+                returnStdout: true
+            ).trim()
 
-                    withCredentials([sshUserPrivateKey(credentialsId: 'ssh-private-key', keyFileVariable: 'SSH_KEY')]) {
-    bat """
-    "C:\\Program Files\\Git\\bin\\bash.exe" -c "cat <<EOF > ansible/inventory.yml
+            // ✅ Inject SSH private key securely
+            withCredentials([
+                sshUserPrivateKey(credentialsId: 'ssh-private-key', keyFileVariable: 'SSH_KEY')
+            ]) {
+
+                // ✅ Create inventory file safely
+                writeFile file: 'ansible/inventory.yml', text: """\
 all:
   hosts:
     pipeline:
       ansible_host: ${EC2_IP}
       ansible_user: ubuntu
-      ansible_ssh_private_key_file: $SSH_KEY
-EOF"
-    """
-}
-                }
+      ansible_ssh_private_key_file: ${SSH_KEY}
+"""
             }
         }
-
+    }
+}
         stage('Wait for SSH') {
             steps {
                 bat '"C:\\Program Files\\Git\\bin\\bash.exe" -c "sleep 60"'
