@@ -7,19 +7,19 @@ variable "region" {
 variable "profile" {
   description = "aws profile info"
   type        = string
-  default     = ""
+  default     = "pipePrac"
 }
 
 variable "amiID" {
   description = "aws machine ID"
   type        = string
-  default     = ""
+  default     = "ami-0ec10929233384c7f"
 }
 
 variable "instanceType" {
   description = "aws instance type"
   type        = string
-  default     = ""
+  default     = "t3.micro"
 }
 
 variable "key_name" {
