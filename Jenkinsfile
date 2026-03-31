@@ -83,14 +83,26 @@ all:
     }
 
     post {
-        always {
-            echo "done"
-        }
-        success {
-            echo "Successful"
-        }
-        failure {
-            echo "Failed"
+    always {
+        echo "done"
+    }
+
+    success {
+        echo "Successful"
+    }
+
+    failure {
+        echo "Failed - Destroying infrastructure..."
+
+        dir('terraform') {
+            withCredentials([
+                [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'pipePrac']
+            ]) {
+                bat """
+                terraform destroy -auto-approve
+                """
+            }
         }
     }
+}
 }
