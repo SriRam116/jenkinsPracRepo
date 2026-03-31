@@ -28,7 +28,7 @@ variable "key_name" {
   default     = ""
 }
 
-variable "key_path" {
+variable "public_key" {
   description = "public key path"
   type        = string
   default     = ""

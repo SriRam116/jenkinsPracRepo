@@ -27,14 +27,20 @@ pipeline {
                     withCredentials([[
                         $class: 'AmazonWebServicesCredentialsBinding',
                         credentialsId: 'pipePrac'
-                        ]]) {
-                            bat '''
-                            "C:\\Program Files\\Git\\bin\\bash.exe" -c "
-                            export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-                            export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-                            terraform apply -auto-approve
-                            "
-                            '''
+                        ],
+                        file(credentialsId: 'ssh-pub-key', variable: 'PUB_KEY')]) {
+                            script{
+                                def pubKey = readFile(PUB_KEY).trim()
+                                withEnv(["TF_VAR_public_key=${pubKey}"]){
+                                    bat '''
+                                    "C:\\Program Files\\Git\\bin\\bash.exe" -c "
+                                    export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+                                    export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+                                    terraform apply -auto-approve
+                                    "
+                                    '''
+                                }   
+                            }
                      }
                  }
               }
