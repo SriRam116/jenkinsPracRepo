@@ -46,7 +46,7 @@ pipeline {
     steps {
         script {
             // ✅ Get EC2 IP (no Git Bash needed)
-            EC2_IP = bat(
+            def EC2_IP = bat(
                 script: 'cd terraform && terraform output -raw awsPubIP',
                 returnStdout: true
             ).trim()
@@ -63,7 +63,7 @@ all:
     pipeline:
       ansible_host: ${EC2_IP}
       ansible_user: ubuntu
-      ansible_ssh_private_key_file: ${SSH_KEY}
+      ansible_ssh_private_key_file: ''' + "${SSH_KEY}" + '''
 """
             }
         }
@@ -76,10 +76,16 @@ all:
         }
 
         stage('Run Ansible') {
-            steps {
-                bat '"C:\\Program Files\\Git\\bin\\bash.exe" -c "ansible-playbook -i ansible/inventory.yml ansible/setup.yml"'
-            }
+    steps {
+        withCredentials([
+            sshUserPrivateKey(credentialsId: 'ssh-private-key', keyFileVariable: 'SSH_KEY')
+        ]) {
+            bat """
+            wsl ansible-playbook -i ansible/inventory.yml ansible/setup.yml --private-key $SSH_KEY
+            """
         }
+    }
+}
     }
 
     post {
