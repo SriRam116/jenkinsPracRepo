@@ -24,9 +24,20 @@ pipeline {
         stage('Terraform apply') {
             steps {
                 dir('terraform') {
-                    bat '"C:\\Program Files\\Git\\bin\\bash.exe" -c "terraform apply -auto-approve"'
-                }
-            }
+                    withCredentials([[
+                        $class: 'AmazonWebServicesCredentialsBinding',
+                        credentialsId: 'aws-creds'
+                        ]]) {
+                            bat '''
+                            "C:\\Program Files\\Git\\bin\\bash.exe" -c "
+                            export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+                            export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+                            terraform apply -auto-approve
+                            "
+                            '''
+                     }
+                 }
+              }
         }
 
         stage('Get Public IP') {
