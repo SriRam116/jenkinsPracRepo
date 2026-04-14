@@ -26,7 +26,7 @@ pipeline {
                 dir('terraform') {
                     withCredentials([
                         [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'pipePrac'],
-                        file(credentialsId: 'ssh-pub-key', variable: 'PUB_KEY')
+                        file(credentialsId: 'wslpublic', variable: 'PUB_KEY')
                     ]) {
                         script {
                             def pubKey = readFile(PUB_KEY).trim()
@@ -48,7 +48,7 @@ pipeline {
             ).trim()
 
             withCredentials([
-                sshUserPrivateKey(credentialsId: 'ssh-private-key', keyFileVariable: 'SSH_KEY')
+                sshUserPrivateKey(credentialsId: 'ansible_SSH', keyFileVariable: 'SSH_KEY')
             ]) {
 
                 // Create inventory
