@@ -39,22 +39,20 @@ pipeline {
             }
         }
 
-        stage('Get Public IP & Create Inventory') {
-            steps {
-                script {
-                    // ✅ Get EC2 IP (Linux way)
-                    def EC2_IP = sh(
-                        script: "cd terraform && terraform output -raw awsPubIP",
-                        returnStdout: true
-                    ).trim()
+        stage('Deploy with Ansible') {
+    steps {
+        script {
+            def EC2_IP = sh(
+                script: "cd terraform && terraform output -raw awsPubIP",
+                returnStdout: true
+            ).trim()
 
-                    // ✅ Inject private key
-                    withCredentials([
-                        sshUserPrivateKey(credentialsId: 'ssh-private-key', keyFileVariable: 'SSH_KEY')
-                    ]) {
+            withCredentials([
+                sshUserPrivateKey(credentialsId: 'ssh-private-key', keyFileVariable: 'SSH_KEY')
+            ]) {
 
-                        // ✅ Create inventory.yml properly
-                        writeFile file: 'ansible/inventory.yml', text: """
+                // Create inventory
+                writeFile file: 'ansible/inventory.yml', text: """
 all:
   hosts:
     pipeline:
@@ -63,28 +61,18 @@ all:
       ansible_ssh_private_key_file: ${SSH_KEY}
       ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
 """
-                    }
-                }
-            }
-        }
 
-        stage('Wait for SSH') {
-            steps {
-                sh 'sleep 60'
-            }
-        }
+                // Debug (optional)
+                sh "ls -l ${SSH_KEY}"
 
-        stage('Run Ansible') {
-            steps {
-                withCredentials([
-                    sshUserPrivateKey(credentialsId: 'ssh-private-key', keyFileVariable: 'SSH_KEY')
-                ]) {
-                    sh """
-                    ansible-playbook -i ansible/inventory.yml ansible/setup.yml
-                    """
-                }
+                // Run Ansible
+                sh """
+                ansible-playbook -i ansible/inventory.yml ansible/setup.yml
+                """
             }
         }
+    }
+}
     }
 
     post {
