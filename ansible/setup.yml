@@ -11,14 +11,14 @@
   
    - name: copy website
      copy:
-       src: ../index.html
+       src: index.html
        dest: /var/www/html/index.html
        notify: Restart nginx
 
-  Handlers:
+  handlers:
    - name: Restart nginx
      service: 
       name: nginx
-      state: started
-      enable: true
+      state: restarted
+      enable: yes
 
