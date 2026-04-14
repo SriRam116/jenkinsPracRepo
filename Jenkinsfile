@@ -16,7 +16,7 @@ pipeline {
         stage('Terraform init') {
             steps {
                 dir('terraform') {
-                    bat '"C:\\Program Files\\Git\\bin\\bash.exe" -c "terraform init"'
+                    sh 'terraform init'
                 }
             }
         }
@@ -24,91 +24,87 @@ pipeline {
         stage('Terraform apply') {
             steps {
                 dir('terraform') {
-                    withCredentials([[
-                        $class: 'AmazonWebServicesCredentialsBinding',
-                        credentialsId: 'pipePrac'
-                        ],
-                        file(credentialsId: 'ssh-pub-key', variable: 'PUB_KEY')]) {
-                            script{
-                                def pubKey = readFile(PUB_KEY).trim()
-                                withEnv(["TF_VAR_public_key=${pubKey}"]){
-                                    bat '''
-                                    terraform apply -auto-approve
-                                    '''
-                                }   
+                    withCredentials([
+                        [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'pipePrac'],
+                        file(credentialsId: 'ssh-pub-key', variable: 'PUB_KEY')
+                    ]) {
+                        script {
+                            def pubKey = readFile(PUB_KEY).trim()
+                            withEnv(["TF_VAR_public_key=${pubKey}"]) {
+                                sh 'terraform apply -auto-approve'
                             }
-                     }
-                 }
-              }
+                        }
+                    }
+                }
+            }
         }
 
-        stage('Get Public IP') {
-    steps {
-        script {
-            // ✅ Get EC2 IP (no Git Bash needed)
-            def EC2_IP = bat(
-                script: 'cd terraform && terraform output -raw awsPubIP',
-                returnStdout: true
-            ).trim()
+        stage('Get Public IP & Create Inventory') {
+            steps {
+                script {
+                    // ✅ Get EC2 IP (Linux way)
+                    def EC2_IP = sh(
+                        script: "cd terraform && terraform output -raw awsPubIP",
+                        returnStdout: true
+                    ).trim()
 
-            // ✅ Inject SSH private key securely
-            withCredentials([
-                sshUserPrivateKey(credentialsId: 'ssh-private-key', keyFileVariable: 'SSH_KEY')
-            ]) {
+                    // ✅ Inject private key
+                    withCredentials([
+                        sshUserPrivateKey(credentialsId: 'ssh-private-key', keyFileVariable: 'SSH_KEY')
+                    ]) {
 
-                // ✅ Create inventory file safely
-                writeFile file: 'ansible/inventory.yml', text: """\
+                        // ✅ Create inventory.yml properly
+                        writeFile file: 'ansible/inventory.yml', text: """
 all:
   hosts:
     pipeline:
       ansible_host: ${EC2_IP}
       ansible_user: ubuntu
-      ansible_ssh_private_key_file: ''' + "${SSH_KEY}" + '''
+      ansible_ssh_private_key_file: ${SSH_KEY}
 """
+                    }
+                }
             }
         }
-    }
-}
+
         stage('Wait for SSH') {
             steps {
-                bat '"C:\\Program Files\\Git\\bin\\bash.exe" -c "sleep 60"'
+                sh 'sleep 60'
             }
         }
 
         stage('Run Ansible') {
-    steps {
-        withCredentials([
-            sshUserPrivateKey(credentialsId: 'ssh-private-key', keyFileVariable: 'SSH_KEY')
-        ]) {
-            bat """
-            wsl ansible-playbook -i ansible/inventory.yml ansible/setup.yml --private-key $SSH_KEY
-            """
-        }
-    }
-}
-    }
-
-    post {
-    always {
-        echo "done"
-    }
-
-    success {
-        echo "Successful"
-    }
-
-    failure {
-        echo "Failed - Destroying infrastructure..."
-
-        dir('terraform') {
-            withCredentials([
-                [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'pipePrac']
-            ]) {
-                bat """
-                terraform destroy -auto-approve
-                """
+            steps {
+                withCredentials([
+                    sshUserPrivateKey(credentialsId: 'ssh-private-key', keyFileVariable: 'SSH_KEY')
+                ]) {
+                    sh """
+                    ansible-playbook -i ansible/inventory.yml ansible/setup.yml
+                    """
+                }
             }
         }
     }
-}
+
+    post {
+        always {
+            echo "done"
+        }
+
+        success {
+            echo "Successful"
+        }
+
+        failure {
+            echo "Failed - Destroying infrastructure..."
+
+            dir('terraform') {
+                withCredentials([
+                    [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'pipePrac']
+                ]) {
+                    sh 'terraform destroy -auto-approve'
+                }
+            }
+        }
+    }
 }
