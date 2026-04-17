@@ -102,7 +102,8 @@ all:
         }
 
         success {
-            echo "Successful"
+            echo """Successful
+            website running on ${EC2_IP}"""
         }
 
         failure {
